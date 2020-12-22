@@ -16,5 +16,5 @@ struct StockResults{
 
 struct StockDetails{
     let name: String
-    let currency: String
+    let symbol: String
 }

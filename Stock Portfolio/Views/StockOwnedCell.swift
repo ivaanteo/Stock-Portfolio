@@ -7,10 +7,9 @@
 //
 
 import UIKit
+import SwipeCellKit
+class StockOwnedCell : SwipeTableViewCell {
 
-class StockOwnedCell: UITableViewCell {
-
-    
     @IBOutlet weak var bgView: UIView!
     @IBOutlet weak var nameLabel: UILabel!
 
@@ -21,16 +20,11 @@ class StockOwnedCell: UITableViewCell {
     @IBOutlet weak var valueLabel: UILabel!
 
     @IBOutlet weak var percentChangeLabel: UILabel!
+    
     override func awakeFromNib() {
         super.awakeFromNib()
     bgView.layer.cornerRadius = bgView.frame.size.height * 0.2
     
-    }
-
-    override func setSelected(_ selected: Bool, animated: Bool) {
-        super.setSelected(selected, animated: animated)
-
-        // Configure the view for the selected state
     }
     
 }

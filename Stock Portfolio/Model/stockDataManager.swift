@@ -6,31 +6,49 @@
 //  Copyright © 2020 Ivan Teo. All rights reserved.
 //
 
-import Foundation
+import UIKit
+import CoreData
 
-struct StockDataManager {
+class StockDataManager {
+    //MARK: - Data Variables
+    let dataFilePath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first?.appendingPathComponent("Stocks.plist")
+    let context = (UIApplication.shared.delegate as! AppDelegate).persistentContainer.viewContext
+    static var stocksOwned = [Stocks]()
+
     let baseUrl = "https://www.alphavantage.co/query?function=GLOBAL_QUOTE"
     var delegate: StockDataManagerDelegate?
+
+
     func getData(symbol: String){
+        loadData()
         let urlString = "\(self.baseUrl)&apikey=\(StockDataManager.apikey)&symbol=\(symbol)"
         accessURL(urlString)
         return
     }
-
+    
     func accessURL(_ urlString: String){
-        
         if let url = URL(string: urlString){
         let session = URLSession(configuration: .default)
         let task = session.dataTask(with: url) { (data, response, error) in
                 if error == nil{
                     if let safeData = data{
                         if let stockData = self.parseJSON(safeData){
-                            self.delegate?.updatedStockData(self, stockData: stockData)
+                                let symbol = stockData.symbol
+                            for stock in StockDataManager.stocksOwned{
+                                    if symbol == stock.symbol!{
+                                        if let safePrice = Double(stockData.price){
+                                            stock.currentPrice = safePrice
+                                        }
+                                        stock.currentValue = self.calculateValue(price: stock.currentPrice, quantity: stock.quantity)
+                                        stock.percentChange = stockData.percentChange
+                                        self.saveData()
+                                        }
+                            }
                         }
                     }
                 }
                 else{
-                    self.delegate?.failedWithError(error: error!)
+                    print(error!.localizedDescription)
                 }
         }
             task.resume()
@@ -51,8 +69,7 @@ struct StockDataManager {
     }
 
 
-
-    func getQuantity(list: [StockModel], symbol: String) -> Double{
+    func getQuantity(list: [Stocks], symbol: String) -> Double{
         var quantity: Double = 0
         for stock in 0..<list.count{
             if list[stock].symbol == symbol{
@@ -62,10 +79,54 @@ struct StockDataManager {
         return quantity
     }
 
-    func calculateValue(price: String, quantity: Double ) -> Double{
-        let value = Double(price)! * quantity
+    func calculateValue(price: Double, quantity: Double ) -> Double{
+        let value = price * quantity
         return value
     }
+
+    func getTotalValue() -> Double{
+        var totalValue = 0.0
+        for stock in StockDataManager.stocksOwned{
+                totalValue += stock.currentValue
+            }
+        return totalValue
+    }
+    
+    func getTotalProfit() -> Double{
+        var totalProfit = 0.0
+        
+        for stock in StockDataManager.stocksOwned{
+            totalProfit += stock.currentValue - stock.entryPrice
+        }
+        return totalProfit
+    }
+    
+    
+
+    //MARK: - Core Data Functions
+    func saveData(){
+        do{
+            try context.save()
+        }catch{
+            print(error.localizedDescription)
+        }
+    }
+
+    func loadData(){
+        let request: NSFetchRequest<Stocks> = Stocks.fetchRequest()
+        do{
+            StockDataManager.stocksOwned = try context.fetch(request)
+        }catch{
+            print(error.localizedDescription)
+        }
+    }
+    
+    func deleteData(row: Int){
+        context.delete(StockDataManager.stocksOwned[row])
+        StockDataManager.stocksOwned.remove(at: row)
+        saveData()
+    }
+    
 
 }
 
